@@ -1,0 +1,20 @@
+# Web scraping
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+
+# PDF processing
+pdfplumber>=0.10.0
+
+# AI summarization (using Anthropic Claude)
+anthropic>=0.40.0
+
+# Email
+python-dotenv>=1.0.0
+
+# Scheduling
+schedule>=1.2.0
+APScheduler>=3.10.0
+
+# Timezone handling
+pytz>=2024.1
