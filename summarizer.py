@@ -92,7 +92,10 @@ class OpinionSummarizer:
 Case Information:
 - Case Number: {opinion.case_number}
 - Case Name: {opinion.case_name}
-- Date Filed: {date_str}
+- Date Published: {date_str}
+
+IMPORTANT: Use EXACTLY this date in your summary: {date_str}
+Do NOT use any other date found in the opinion text. The date parenthetical must be ({date_str}).
 
 Opinion Text:
 {opinion_text}
