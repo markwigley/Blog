@@ -54,33 +54,33 @@ class EmailSender:
     def send_digest(
         self,
         opinions_with_summaries: list[tuple[Opinion, str]],
-        recipient: Optional[str] = None,
+        recipients: Optional[list[str]] = None,
     ) -> bool:
         """
         Send the weekly digest email.
 
         Args:
             opinions_with_summaries: List of (Opinion, summary) tuples.
-            recipient: Email recipient. Defaults to config.RECIPIENT_EMAIL.
+            recipients: List of email recipients. Defaults to config.RECIPIENT_EMAILS.
 
         Returns:
             True if email was sent successfully, False otherwise.
         """
-        recipient = recipient or config.RECIPIENT_EMAIL
+        recipients = recipients or config.RECIPIENT_EMAILS
 
         if not opinions_with_summaries:
             logger.info("No new opinions to send")
             return True
 
         logger.info(
-            f"Sending digest with {len(opinions_with_summaries)} opinions to {recipient}"
+            f"Sending digest with {len(opinions_with_summaries)} opinions to {', '.join(recipients)}"
         )
 
         # Build the email
         msg = MIMEMultipart("alternative")
         msg["Subject"] = self._build_subject(len(opinions_with_summaries))
         msg["From"] = self.from_email
-        msg["To"] = recipient
+        msg["To"] = ", ".join(recipients)
 
         # Create plain text and HTML versions
         text_content = self._build_text_body(opinions_with_summaries)
@@ -247,7 +247,7 @@ def send_test_email(recipient: str) -> bool:
             f"If you received this email, your setup is working correctly."
         )
 
-        return sender.send_digest([(test_opinion, test_summary)], recipient)
+        return sender.send_digest([(test_opinion, test_summary)], [recipient])
 
     except Exception as e:
         logger.error(f"Test email failed: {e}")

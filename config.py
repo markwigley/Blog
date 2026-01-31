@@ -31,7 +31,9 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USERNAME = os.getenv("SMTP_USERNAME")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 EMAIL_FROM = os.getenv("EMAIL_FROM")
-RECIPIENT_EMAIL = os.getenv("RECIPIENT_EMAIL", "mswigley@wardandsmith.com")
+# Support multiple recipients (comma-separated)
+_recipient_env = os.getenv("RECIPIENT_EMAIL", "mswigley@wardandsmith.com")
+RECIPIENT_EMAILS = [email.strip() for email in _recipient_env.split(",")]
 
 # Timezone
 TIMEZONE = os.getenv("TIMEZONE", "US/Eastern")
