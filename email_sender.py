@@ -5,6 +5,7 @@ Sends the weekly digest of court opinion summaries via email.
 """
 
 import logging
+import re
 import smtplib
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
@@ -115,7 +116,7 @@ class EmailSender:
         date_str = datetime.now().strftime("%B %d, %Y")
 
         lines = [
-            f"FOURTH CIRCUIT COURT OF APPEALS",
+            "FOURTH CIRCUIT COURT OF APPEALS",
             f"Weekly Opinion Digest - {date_str}",
             "",
             f"This week's digest includes {len(opinions_with_summaries)} new published opinion(s).",
@@ -126,14 +127,11 @@ class EmailSender:
 
         for opinion, summary in opinions_with_summaries:
             lines.extend([
-                f"Case: {opinion.case_name}",
-                f"No.: {opinion.case_number}",
-                f"Filed: {opinion.date_filed.strftime('%B %d, %Y')}",
-                f"PDF: {opinion.pdf_url}",
-                "",
                 summary,
                 "",
-                "-" * 40,
+                f"PDF: {opinion.pdf_url}",
+                "",
+                "-" * 60,
                 "",
             ])
 
@@ -159,50 +157,65 @@ class EmailSender:
             "<html>",
             "<head>",
             "<style>",
-            "body { font-family: Georgia, serif; max-width: 700px; margin: 0 auto; padding: 20px; color: #333; }",
-            "h1 { color: #1a365d; border-bottom: 2px solid #1a365d; padding-bottom: 10px; }",
-            "h2 { color: #2c5282; font-size: 1.1em; margin-top: 0; }",
-            ".opinion { background: #f7fafc; border-left: 4px solid #2c5282; padding: 15px; margin: 20px 0; }",
-            ".meta { font-size: 0.9em; color: #666; margin-bottom: 10px; }",
-            ".summary { line-height: 1.6; }",
-            ".summary em { font-style: italic; }",
+            "body { font-family: Georgia, serif; max-width: 750px; margin: 0 auto; padding: 20px; color: #333; line-height: 1.6; }",
+            "h1 { color: #1a365d; border-bottom: 2px solid #1a365d; padding-bottom: 10px; font-size: 1.5em; }",
+            ".intro { color: #555; margin-bottom: 25px; }",
+            ".opinion { margin: 25px 0; padding-bottom: 25px; border-bottom: 1px solid #ddd; }",
+            ".opinion:last-of-type { border-bottom: none; }",
+            ".case-header { font-weight: bold; color: #1a365d; }",
+            ".case-meta { color: #666; }",
+            ".panel { font-size: 0.95em; }",
+            ".panel .author { text-transform: uppercase; }",
+            ".summary-text { margin-top: 8px; }",
+            ".pdf-link { margin-top: 10px; font-size: 0.9em; }",
             "a { color: #2c5282; }",
-            ".footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 0.85em; color: #666; }",
+            ".footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #1a365d; font-size: 0.85em; color: #666; }",
             "</style>",
             "</head>",
             "<body>",
-            f"<h1>Fourth Circuit Weekly Digest</h1>",
-            f"<p><strong>{date_str}</strong> - {len(opinions_with_summaries)} new published opinion(s)</p>",
+            "<h1>Fourth Circuit Weekly Digest</h1>",
+            f'<p class="intro"><strong>{date_str}</strong> &mdash; {len(opinions_with_summaries)} new published opinion(s) this week.</p>',
         ]
 
         for opinion, summary in opinions_with_summaries:
-            # Convert markdown-style italics to HTML
-            html_summary = summary.replace("*", "<em>", 1).replace("*", "</em>", 1)
-
-            html_parts.extend([
-                '<div class="opinion">',
-                f'<h2>{opinion.case_name}</h2>',
-                '<div class="meta">',
-                f'Case No. {opinion.case_number} | ',
-                f'Filed: {opinion.date_filed.strftime("%B %d, %Y")} | ',
-                f'<a href="{opinion.pdf_url}">View Full Opinion (PDF)</a>',
-                '</div>',
-                f'<div class="summary">{html_summary}</div>',
-                '</div>',
-            ])
+            # The summary already contains case name, date, category, panel, and text
+            # Format it nicely for HTML display
+            html_summary = self._format_summary_html(summary, opinion.pdf_url)
+            html_parts.append(html_summary)
 
         html_parts.extend([
             '<div class="footer">',
             '<p>This is an automated digest. Summaries are AI-generated and should be '
             'verified against the full opinions for accuracy.</p>',
             '<p>Source: <a href="https://www.ca4.uscourts.gov/opinions/recent-opinions/published-only">'
-            'Fourth Circuit Court of Appeals</a></p>',
+            'Fourth Circuit Court of Appeals - Recent Published Opinions</a></p>',
             '</div>',
             '</body>',
             '</html>',
         ])
 
         return "\n".join(html_parts)
+
+    def _format_summary_html(self, summary: str, pdf_url: str) -> str:
+        """Format a summary for HTML display."""
+        # Try to parse the structured summary format:
+        # Case Name (Date) (Category) (Panel): Summary text
+        pattern = r'^(.+?)\s*\(([^)]+)\)\s*\(([^)]+)\)\s*\(([^)]+)\):\s*(.+)$'
+        match = re.match(pattern, summary, re.DOTALL)
+
+        if match:
+            case_name, date, category, panel, text = match.groups()
+            return f'''<div class="opinion">
+<p><span class="case-header">{case_name.strip()}</span> <span class="case-meta">({date.strip()}) ({category.strip()})</span> <span class="panel">({panel.strip()})</span></p>
+<p class="summary-text">{text.strip()}</p>
+<p class="pdf-link"><a href="{pdf_url}">View Full Opinion (PDF)</a></p>
+</div>'''
+        else:
+            # Fallback: just display the summary as-is
+            return f'''<div class="opinion">
+<p>{summary}</p>
+<p class="pdf-link"><a href="{pdf_url}">View Full Opinion (PDF)</a></p>
+</div>'''
 
 
 def send_test_email(recipient: str) -> bool:
@@ -226,9 +239,12 @@ def send_test_email(recipient: str) -> bool:
             pdf_url="https://www.ca4.uscourts.gov/test.pdf",
         )
 
+        date_str = datetime.now().strftime('%b. %d, %Y').replace('May.', 'May')
         test_summary = (
-            "*Test v. Configuration* - This is a test email to verify that the "
-            "Fourth Circuit Opinion Digest email system is properly configured."
+            f"Test v. Configuration ({date_str}) (Civil – Test Case) "
+            f"(EXAMPLE, Judge, Panel): This is a test email to verify that the "
+            f"Fourth Circuit Opinion Digest email system is properly configured. "
+            f"If you received this email, your setup is working correctly."
         )
 
         return sender.send_digest([(test_opinion, test_summary)], recipient)
