@@ -34,9 +34,9 @@ You'll need two things:
    - Select device: "Other" → type "Court Digest"
 7. Copy the 16-character password (looks like: `abcd efgh ijkl mnop`)
 
-### Step 2: Deploy to the Cloud (PythonAnywhere - Free Option)
+### Step 2: Deploy to the Cloud (Render)
 
-See the **"Cloud Deployment with PythonAnywhere"** section below for step-by-step instructions.
+See the **"Cloud Deployment with Render"** section below for step-by-step instructions.
 
 ---
 
@@ -127,67 +127,67 @@ Blog/
     └── opinion_pdfs/            # PDF cache
 ```
 
-## Cloud Deployment with PythonAnywhere
+## Cloud Deployment with Render
 
-PythonAnywhere is a beginner-friendly cloud platform that can run this script for free.
+Render is a beginner-friendly cloud platform. You'll use a **Cron Job** to run the digest every Friday.
 
 ### Step-by-Step Setup
 
-1. **Create Account**
-   - Go to https://www.pythonanywhere.com/
-   - Click "Pricing & signup" → "Create a Beginner account" (free)
+1. **Push Code to GitHub** (if not already done)
+   - Create a GitHub account at https://github.com/ if you don't have one
+   - Create a new repository called `court-digest`
+   - Upload all the files from this project to that repository
 
-2. **Upload Files**
-   - After logging in, click "Files" in the top menu
-   - Click "Upload a file" and upload all the `.py` files and `requirements.txt`
-   - Or use the "Open Bash console" and run:
-     ```bash
-     git clone https://github.com/YOUR_USERNAME/Blog.git
-     cd Blog
-     ```
+2. **Create Render Account**
+   - Go to https://render.com/
+   - Click "Get Started" and sign up (you can use your GitHub account)
 
-3. **Install Dependencies**
-   - Click "Consoles" → "Bash" to open a terminal
-   - Run:
-     ```bash
-     pip3 install --user -r requirements.txt
-     ```
+3. **Create a Cron Job**
+   - From your Render dashboard, click **"New"** → **"Cron Job"**
+   - Connect your GitHub account if prompted
+   - Select your `court-digest` repository
+   - Configure the cron job:
+     - **Name**: `court-opinions-digest`
+     - **Region**: Choose one close to you (e.g., "Ohio" for US East)
+     - **Branch**: `main` (or whatever your main branch is called)
+     - **Runtime**: `Python 3`
+     - **Build Command**: `pip install -r requirements.txt`
+     - **Schedule**: `0 22 * * 5` (This runs at 10pm UTC = 5pm Eastern on Fridays)
+     - **Command**: `python main.py --run-now`
 
-4. **Create Your .env File**
-   - In the Files section, click "Open another file" and type `.env`
-   - Paste this content (fill in your actual values):
-     ```
-     ANTHROPIC_API_KEY=sk-ant-your-key-here
-     SMTP_HOST=smtp.gmail.com
-     SMTP_PORT=587
-     SMTP_USERNAME=your.email@gmail.com
-     SMTP_PASSWORD=your-16-char-app-password
-     EMAIL_FROM=your.email@gmail.com
-     RECIPIENT_EMAIL=mswigley@wardandsmith.com
-     TIMEZONE=US/Eastern
-     ```
-   - Click "Save"
+4. **Add Environment Variables**
+   - Scroll down to **"Environment Variables"**
+   - Click **"Add Environment Variable"** for each of these:
 
-5. **Set Up Scheduled Task**
-   - Click "Tasks" in the top menu
-   - Under "Scheduled tasks", enter:
-     - Time: `21:00` (this is 5pm Eastern in UTC)
-     - Command: `cd ~/Blog && python3 main.py --run-now`
-   - Click "Create"
-   - Change the frequency dropdown to "Weekly" and select "Friday"
+   | Key | Value |
+   |-----|-------|
+   | `ANTHROPIC_API_KEY` | `sk-ant-your-key-here` |
+   | `SMTP_HOST` | `smtp.gmail.com` |
+   | `SMTP_PORT` | `587` |
+   | `SMTP_USERNAME` | `your.email@gmail.com` |
+   | `SMTP_PASSWORD` | `your-16-char-app-password` |
+   | `EMAIL_FROM` | `your.email@gmail.com` |
+   | `RECIPIENT_EMAIL` | `mswigley@wardandsmith.com` |
+   | `TIMEZONE` | `US/Eastern` |
+
+5. **Create the Cron Job**
+   - Click **"Create Cron Job"**
+   - Render will build your project (this takes a few minutes)
 
 6. **Test It**
-   - Open a Bash console and run:
-     ```bash
-     cd ~/Blog
-     python3 main.py --test-email
-     ```
-   - Check your email for the test message
+   - Once the build completes, click on your cron job
+   - Click **"Trigger Run"** to run it immediately and test
+   - Check your email for the digest (or any error messages in the Render logs)
 
-### Free Tier Limitations
-- PythonAnywhere free tier allows one scheduled task
-- The task runs once per day (or weekly if you set it)
-- If you need more, their paid tier is ~$5/month
+### Render Pricing
+- **Free tier**: Cron jobs are NOT included in free tier
+- **Starter tier**: $1/month for cron jobs (billed by usage)
+- The digest runs once per week, so costs should be minimal (~$1-2/month total including AI costs)
+
+### Checking Logs
+- Click on your cron job in the Render dashboard
+- Click **"Logs"** to see what happened during each run
+- If something fails, the error messages will appear here
 
 ---
 
