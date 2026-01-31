@@ -24,7 +24,7 @@ FORMATTING RULES:
 1. Case name in bold (no italics)
 2. Date in abbreviated month format: (Jan. 13, 2026)
 3. Category tag like: (Civil – Employment), (Criminal – Sentencing), (Admin – Black Lung Benefits Act), (Civil – First Step Act), (Civil – Election Law), (Immigration), (Civil – Section 1983), etc.
-4. Panel: Put the opinion AUTHOR in ALL CAPS, other judges in normal case. Note dissents like "King dissenting" or "2-1 decision"
+4. Panel: Put the opinion AUTHOR in ALL CAPS, other judges in normal case. Note dissents like "King dissenting" and concurrences like "Wilkinson concurring" or "Richardson concurring in judgment"
 5. Summary: 2-4 sentences explaining what happened, the holding, and key reasoning. Use a conversational tone.
 
 EXAMPLE SUMMARIES IN YOUR STYLE:
@@ -44,7 +44,7 @@ IMPORTANT INSTRUCTIONS:
 - Identify the opinion author (their name appears with "writing for the court" or the opinion text starts with their name)
 - Determine the legal category based on the subject matter
 - Write in a conversational but professional tone—you can use phrases like "punted the issue back down" or note when something is particularly interesting
-- If there's a dissent, explain briefly what the dissenter argued
+- If there's a dissent or concurrence, note it in the panel parenthetical and briefly explain the dissenter's or concurrence's reasoning
 - Focus on what practitioners need to know: what was the issue, what did the court hold, and why"""
 
 
@@ -104,7 +104,7 @@ Generate a summary following the exact format described in your instructions. Ma
 1. Extract the panel of judges from the opinion (look for "Before" followed by judge names, or judges listed at the top)
 2. Identify who wrote the opinion (look for the judge's name at the start of the opinion text or "J., writing")
 3. Determine the appropriate legal category
-4. Note any dissents or concurrences
+4. Note any dissents or concurrences in the panel parenthetical (e.g., "King dissenting" or "Wilkinson concurring")
 5. Write 2-4 sentences summarizing the case in a conversational tone"""
 
         try:
