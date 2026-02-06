@@ -185,8 +185,8 @@ Environment Variables:
     parser.add_argument(
         "--recipient",
         type=str,
-        default=config.RECIPIENT_EMAIL,
-        help=f"Override recipient email (default: {config.RECIPIENT_EMAIL})"
+        default=None,
+        help="Override recipient email"
     )
 
     parser.add_argument(
@@ -222,7 +222,7 @@ Environment Variables:
     logger.info("Starting Fourth Circuit Opinion Digest Scheduler")
     logger.info(f"Schedule: Every {config.SCHEDULE_DAY.capitalize()} at {config.SCHEDULE_TIME}")
     logger.info(f"Timezone: {config.TIMEZONE}")
-    logger.info(f"Recipient: {config.RECIPIENT_EMAIL}")
+    logger.info(f"Recipients: {', '.join(config.RECIPIENT_EMAILS)}")
 
     scheduler = DigestScheduler(run_digest)
     scheduler.start()
