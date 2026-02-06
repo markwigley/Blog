@@ -43,6 +43,10 @@ TIMEZONE = os.getenv("TIMEZONE", "US/Eastern")
 _reviewed_env = os.getenv("REVIEWED_OPINION_IDS", "")
 REVIEWED_OPINION_IDS = set(id.strip() for id in _reviewed_env.split(",") if id.strip())
 
+# Render API settings (for automatic environment variable updates)
+RENDER_API_KEY = os.getenv("RENDER_API_KEY")
+RENDER_SERVICE_ID = os.getenv("RENDER_SERVICE_ID")
+
 # Schedule settings
 SCHEDULE_DAY = "friday"
 SCHEDULE_TIME = "17:00"  # 5:00 PM

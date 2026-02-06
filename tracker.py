@@ -19,6 +19,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+import requests
+
 import config
 from scraper import Opinion
 
@@ -138,16 +140,68 @@ class OpinionTracker:
         """Get IDs that were newly reviewed in this run."""
         return self._new_reviewed_ids.copy()
 
+    def save_to_render(self) -> bool:
+        """
+        Automatically update the REVIEWED_OPINION_IDS environment variable in Render.
+
+        Requires RENDER_API_KEY and RENDER_SERVICE_ID environment variables.
+
+        Returns:
+            True if successful, False otherwise.
+        """
+        if not config.RENDER_API_KEY or not config.RENDER_SERVICE_ID:
+            logger.info("Render API credentials not configured - skipping auto-save")
+            self.print_env_update_instructions()
+            return False
+
+        all_ids = self.get_all_reviewed_ids()
+        if not all_ids:
+            logger.info("No reviewed opinions to save")
+            return True
+
+        ids_str = ",".join(sorted(all_ids))
+
+        # Use Render API to update the environment variable
+        url = f"https://api.render.com/v1/services/{config.RENDER_SERVICE_ID}/env-vars/REVIEWED_OPINION_IDS"
+        headers = {
+            "Authorization": f"Bearer {config.RENDER_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        data = {"value": ids_str}
+
+        try:
+            # Try to update existing env var
+            response = requests.put(url, headers=headers, json=data, timeout=30)
+
+            if response.status_code == 404:
+                # Env var doesn't exist, create it
+                create_url = f"https://api.render.com/v1/services/{config.RENDER_SERVICE_ID}/env-vars"
+                data = {"key": "REVIEWED_OPINION_IDS", "value": ids_str}
+                response = requests.post(create_url, headers=headers, json=data, timeout=30)
+
+            if response.status_code in [200, 201]:
+                logger.info(f"Successfully saved {len(all_ids)} reviewed opinion IDs to Render")
+                return True
+            else:
+                logger.error(f"Failed to save to Render: {response.status_code} - {response.text}")
+                self.print_env_update_instructions()
+                return False
+
+        except requests.RequestException as e:
+            logger.error(f"Error connecting to Render API: {e}")
+            self.print_env_update_instructions()
+            return False
+
     def print_env_update_instructions(self):
-        """Print instructions for updating the environment variable."""
+        """Print instructions for manually updating the environment variable."""
         all_ids = self.get_all_reviewed_ids()
         if all_ids:
             ids_str = ",".join(sorted(all_ids))
             logger.info("=" * 60)
-            logger.info("IMPORTANT: Update your REVIEWED_OPINION_IDS environment variable")
-            logger.info("in Render with the following value to persist tracking:")
+            logger.info("MANUAL UPDATE REQUIRED: Add/update REVIEWED_OPINION_IDS")
+            logger.info("in Render Environment Variables with this value:")
             logger.info("=" * 60)
-            logger.info(f"REVIEWED_OPINION_IDS={ids_str}")
+            logger.info(f"{ids_str}")
             logger.info("=" * 60)
 
     def clear(self):
