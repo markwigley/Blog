@@ -38,6 +38,11 @@ RECIPIENT_EMAILS = [email.strip() for email in _recipient_env.split(",")]
 # Timezone
 TIMEZONE = os.getenv("TIMEZONE", "US/Eastern")
 
+# Reviewed opinions tracking (comma-separated unique IDs for persistence in cloud environments)
+# Format: "case1_20260101,case2_20260102,..."
+_reviewed_env = os.getenv("REVIEWED_OPINION_IDS", "")
+REVIEWED_OPINION_IDS = set(id.strip() for id in _reviewed_env.split(",") if id.strip())
+
 # Schedule settings
 SCHEDULE_DAY = "friday"
 SCHEDULE_TIME = "17:00"  # 5:00 PM

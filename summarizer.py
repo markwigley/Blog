@@ -92,20 +92,22 @@ class OpinionSummarizer:
 Case Information:
 - Case Number: {opinion.case_number}
 - Case Name: {opinion.case_name}
-- Date Published: {date_str}
 
-IMPORTANT: Use EXACTLY this date in your summary: {date_str}
-Do NOT use any other date found in the opinion text. The date parenthetical must be ({date_str}).
+IMPORTANT DATE INSTRUCTION:
+Find the "Decided:" date in the opinion text (usually on the first page, below the case caption).
+Use THAT date in your summary parenthetical, formatted as (Mon. DD, YYYY).
+Do NOT use today's date or any other date - only the "Decided:" date from the opinion.
 
 Opinion Text:
 {opinion_text}
 
 Generate a summary following the exact format described in your instructions. Make sure to:
-1. Extract the panel of judges from the opinion (look for "Before" followed by judge names, or judges listed at the top)
-2. Identify who wrote the opinion (look for the judge's name at the start of the opinion text or "J., writing")
-3. Determine the appropriate legal category
-4. Note any dissents or concurrences in the panel parenthetical (e.g., "King dissenting" or "Wilkinson concurring")
-5. Write 2-4 sentences summarizing the case in a conversational tone"""
+1. Extract the "Decided:" date from the opinion (look for "Decided:" followed by a date near the top)
+2. Extract the panel of judges from the opinion (look for "Before" followed by judge names, or judges listed at the top)
+3. Identify who wrote the opinion (look for the judge's name at the start of the opinion text or "J., writing")
+4. Determine the appropriate legal category
+5. Note any dissents or concurrences in the panel parenthetical (e.g., "King dissenting" or "Wilkinson concurring")
+6. Write 2-4 sentences summarizing the case in a conversational tone"""
 
         try:
             response = self.client.messages.create(

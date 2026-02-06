@@ -133,6 +133,9 @@ def run_digest() -> bool:
             for opinion, summary in opinions_with_summaries:
                 tracker.mark_reviewed(opinion, summary)
 
+            # Print instructions for updating environment variable (for cloud persistence)
+            tracker.print_env_update_instructions()
+
             logger.info("=" * 60)
             logger.info("Digest completed successfully!")
             logger.info(f"Sent {len(opinions_with_summaries)} opinion summaries")

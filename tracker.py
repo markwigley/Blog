@@ -3,6 +3,14 @@ Opinion tracking module.
 
 Keeps track of which opinions have already been reviewed and summarized
 to avoid sending duplicate summaries.
+
+Supports two persistence methods:
+1. File-based storage (for local development)
+2. Environment variable (for cloud platforms like Render where files don't persist)
+
+For cloud deployment, set REVIEWED_OPINION_IDS environment variable with
+comma-separated unique IDs. After each run, the program will output the
+updated list of IDs to add to the environment variable.
 """
 
 import json
@@ -30,22 +38,33 @@ class OpinionTracker:
         """
         self.storage_file = storage_file or config.REVIEWED_OPINIONS_FILE
         self._reviewed: dict[str, dict] = {}
+        self._env_reviewed_ids: set[str] = config.REVIEWED_OPINION_IDS.copy()
+        self._new_reviewed_ids: list[str] = []  # Track new IDs from this run
         self._load()
 
     def _load(self):
-        """Load the reviewed opinions from storage."""
+        """Load the reviewed opinions from storage and environment variable."""
         config.ensure_data_dirs()
 
+        # Load from file if it exists
         if self.storage_file.exists():
             try:
                 with open(self.storage_file, "r") as f:
                     self._reviewed = json.load(f)
-                logger.info(f"Loaded {len(self._reviewed)} reviewed opinions")
+                logger.info(f"Loaded {len(self._reviewed)} reviewed opinions from file")
             except (json.JSONDecodeError, IOError) as e:
-                logger.warning(f"Failed to load reviewed opinions: {e}")
+                logger.warning(f"Failed to load reviewed opinions from file: {e}")
                 self._reviewed = {}
         else:
             self._reviewed = {}
+
+        # Also load IDs from environment variable (for cloud persistence)
+        if self._env_reviewed_ids:
+            logger.info(f"Loaded {len(self._env_reviewed_ids)} reviewed opinion IDs from environment")
+            # Add env IDs to reviewed dict if not already present
+            for unique_id in self._env_reviewed_ids:
+                if unique_id not in self._reviewed:
+                    self._reviewed[unique_id] = {"from_env": True}
 
     def _save(self):
         """Save the reviewed opinions to storage."""
@@ -69,7 +88,9 @@ class OpinionTracker:
         Returns:
             True if the opinion has been reviewed, False otherwise.
         """
-        return opinion.unique_id in self._reviewed
+        # Check both file-based storage and environment variable
+        return (opinion.unique_id in self._reviewed or
+                opinion.unique_id in self._env_reviewed_ids)
 
     def mark_reviewed(self, opinion: Opinion, summary: str):
         """
@@ -87,6 +108,7 @@ class OpinionTracker:
             "summary": summary,
             "reviewed_at": datetime.now().isoformat(),
         }
+        self._new_reviewed_ids.append(opinion.unique_id)
         self._save()
         logger.info(f"Marked opinion as reviewed: {opinion.case_number}")
 
@@ -108,8 +130,29 @@ class OpinionTracker:
         """Get all reviewed opinions."""
         return self._reviewed.copy()
 
+    def get_all_reviewed_ids(self) -> set[str]:
+        """Get all reviewed opinion unique IDs (for environment variable update)."""
+        return set(self._reviewed.keys()) | self._env_reviewed_ids
+
+    def get_new_reviewed_ids(self) -> list[str]:
+        """Get IDs that were newly reviewed in this run."""
+        return self._new_reviewed_ids.copy()
+
+    def print_env_update_instructions(self):
+        """Print instructions for updating the environment variable."""
+        all_ids = self.get_all_reviewed_ids()
+        if all_ids:
+            ids_str = ",".join(sorted(all_ids))
+            logger.info("=" * 60)
+            logger.info("IMPORTANT: Update your REVIEWED_OPINION_IDS environment variable")
+            logger.info("in Render with the following value to persist tracking:")
+            logger.info("=" * 60)
+            logger.info(f"REVIEWED_OPINION_IDS={ids_str}")
+            logger.info("=" * 60)
+
     def clear(self):
         """Clear all reviewed opinions (useful for testing)."""
         self._reviewed = {}
+        self._new_reviewed_ids = []
         self._save()
         logger.info("Cleared all reviewed opinions")
