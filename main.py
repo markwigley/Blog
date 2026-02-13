@@ -20,7 +20,7 @@ Usage:
 import argparse
 import logging
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import config
 from email_sender import EmailSender, send_test_email
@@ -28,7 +28,6 @@ from pdf_extractor import PDFExtractor
 from scheduler import DigestScheduler
 from scraper import FourthCircuitScraper, Opinion
 from summarizer import OpinionSummarizer
-from tracker import OpinionTracker
 
 # Configure logging
 logging.basicConfig(
@@ -64,7 +63,6 @@ def run_digest() -> bool:
     try:
         # Initialize components
         scraper = FourthCircuitScraper()
-        tracker = OpinionTracker()
         extractor = PDFExtractor()
         summarizer = OpinionSummarizer()
         emailer = EmailSender()
@@ -72,21 +70,22 @@ def run_digest() -> bool:
         # Step 1: Fetch recent opinions
         logger.info("Step 1: Fetching recent opinions...")
         all_opinions = scraper.fetch_recent_opinions()
-        logger.info(f"Found {len(all_opinions)} total opinions")
+        logger.info(f"Found {len(all_opinions)} total opinions on the page")
 
         if not all_opinions:
             logger.warning("No opinions found on the website")
             return True
 
-        # Step 2: Filter to new opinions
-        logger.info("Step 2: Filtering to new opinions...")
-        new_opinions = tracker.get_new_opinions(all_opinions)
+        # Step 2: Filter to only opinions from the last 7 days
+        logger.info("Step 2: Filtering to opinions from the last 7 days...")
+        cutoff_date = datetime.now() - timedelta(days=7)
+        new_opinions = [op for op in all_opinions if op.date_filed >= cutoff_date]
 
         if not new_opinions:
-            logger.info("No new opinions to process")
+            logger.info("No opinions from the last 7 days")
             return True
 
-        logger.info(f"Processing {len(new_opinions)} new opinions")
+        logger.info(f"Found {len(new_opinions)} opinions from the last 7 days")
 
         # Step 3: Process each opinion
         logger.info("Step 3: Downloading and extracting opinion text...")
@@ -115,11 +114,9 @@ def run_digest() -> bool:
 
             except Exception as e:
                 logger.error(f"Error processing {opinion.case_number}: {e}")
-                # Include with fallback summary
                 fallback = (
-                    f"*{opinion.case_name}* (Case No. {opinion.case_number}) - "
-                    f"Summary unavailable due to processing error. "
-                    f"[View full opinion]({opinion.pdf_url})"
+                    f"{opinion.case_name} (Case No. {opinion.case_number}) - "
+                    f"Summary unavailable due to processing error."
                 )
                 opinions_with_summaries.append((opinion, fallback))
 
@@ -128,14 +125,6 @@ def run_digest() -> bool:
         success = emailer.send_digest(opinions_with_summaries)
 
         if success:
-            # Step 6: Mark as reviewed
-            logger.info("Step 6: Marking opinions as reviewed...")
-            for opinion, summary in opinions_with_summaries:
-                tracker.mark_reviewed(opinion, summary)
-
-            # Save reviewed opinions to Render (or print manual instructions if API not configured)
-            tracker.save_to_render()
-
             logger.info("=" * 60)
             logger.info("Digest completed successfully!")
             logger.info(f"Sent {len(opinions_with_summaries)} opinion summaries")
