@@ -76,23 +76,15 @@ def run_digest() -> bool:
             logger.warning("No opinions found on the website")
             return True
 
-        # Step 2: Filter to only opinions from the last 7 days
-        logger.info("Step 2: Filtering to opinions from the last 7 days...")
+        # Steps 2-4: For each opinion, download PDF, extract "Decided:" date,
+        # filter to last 7 days, then summarize
         cutoff_date = datetime.now() - timedelta(days=7)
-        new_opinions = [op for op in all_opinions if op.date_filed >= cutoff_date]
+        logger.info(f"Step 2: Checking opinions decided since {cutoff_date.strftime('%B %d, %Y')}...")
 
-        if not new_opinions:
-            logger.info("No opinions from the last 7 days")
-            return True
-
-        logger.info(f"Found {len(new_opinions)} opinions from the last 7 days")
-
-        # Step 3: Process each opinion
-        logger.info("Step 3: Downloading and extracting opinion text...")
         opinions_with_summaries: list[tuple[Opinion, str]] = []
 
-        for i, opinion in enumerate(new_opinions, 1):
-            logger.info(f"Processing opinion {i}/{len(new_opinions)}: {opinion.case_number}")
+        for i, opinion in enumerate(all_opinions, 1):
+            logger.info(f"Checking opinion {i}/{len(all_opinions)}: {opinion.case_number}")
 
             try:
                 # Download PDF
@@ -102,23 +94,34 @@ def run_digest() -> bool:
                 opinion_text = extractor.extract_text(pdf_content)
 
                 if not opinion_text or len(opinion_text) < 100:
-                    logger.warning(f"Could not extract meaningful text from {opinion.case_number}")
-                    opinion_text = f"Case: {opinion.case_name}\nCase Number: {opinion.case_number}"
+                    logger.warning(f"Could not extract text from {opinion.case_number}, skipping")
+                    continue
+
+                # Extract the "Decided:" date from the PDF itself
+                decided_date = extractor.extract_decided_date(opinion_text)
+
+                if decided_date is None:
+                    logger.warning(f"No 'Decided:' date found in {opinion.case_number}, skipping")
+                    continue
+
+                # Only include opinions decided in the last 7 days
+                if decided_date < cutoff_date:
+                    logger.info(f"Skipping {opinion.case_number} - decided {decided_date.strftime('%B %d, %Y')} (too old)")
+                    continue
+
+                logger.info(f"Including {opinion.case_number} - decided {decided_date.strftime('%B %d, %Y')}")
 
                 # Generate summary
-                logger.info(f"Step 4: Generating summary for {opinion.case_number}...")
                 summary = summarizer.summarize(opinion, opinion_text)
-
                 opinions_with_summaries.append((opinion, summary))
                 logger.info(f"Summary generated for {opinion.case_number}")
 
             except Exception as e:
                 logger.error(f"Error processing {opinion.case_number}: {e}")
-                fallback = (
-                    f"{opinion.case_name} (Case No. {opinion.case_number}) - "
-                    f"Summary unavailable due to processing error."
-                )
-                opinions_with_summaries.append((opinion, fallback))
+
+        if not opinions_with_summaries:
+            logger.info("No new opinions from the last 7 days - no email sent")
+            return True
 
         # Step 5: Send email
         logger.info("Step 5: Sending email digest...")

@@ -6,6 +6,8 @@ Extracts text content from court opinion PDFs for summarization.
 
 import io
 import logging
+import re
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -115,6 +117,48 @@ class PDFExtractor:
         sections["opinion"] = text
 
         return sections
+
+    def extract_decided_date(self, text: str) -> Optional[datetime]:
+        """
+        Extract the 'Decided:' date from the first few pages of an opinion.
+
+        Args:
+            text: The extracted opinion text.
+
+        Returns:
+            The decided date as a datetime, or None if not found.
+        """
+        # Only search the first 3000 characters (first 1-3 pages)
+        search_text = text[:3000]
+
+        patterns = [
+            r"Decided:\s*([A-Za-z]+ \d{1,2},?\s*\d{4})",
+            r"DECIDED:\s*([A-Za-z]+ \d{1,2},?\s*\d{4})",
+            r"Decided:\s*(\d{1,2}/\d{1,2}/\d{4})",
+            r"Filed:\s*([A-Za-z]+ \d{1,2},?\s*\d{4})",
+            r"Filed:\s*(\d{1,2}/\d{1,2}/\d{4})",
+        ]
+
+        date_formats = [
+            "%B %d, %Y",
+            "%B %d %Y",
+            "%b %d, %Y",
+            "%b %d %Y",
+            "%m/%d/%Y",
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, search_text, re.IGNORECASE)
+            if match:
+                date_str = match.group(1).strip()
+                for fmt in date_formats:
+                    try:
+                        return datetime.strptime(date_str, fmt)
+                    except ValueError:
+                        continue
+
+        logger.warning("Could not find 'Decided:' date in opinion text")
+        return None
 
     def get_first_n_chars(self, text: str, n: int = 15000) -> str:
         """
